@@ -16,15 +16,40 @@ export class ImageService {
       albumId,
       expiredAt,
       slug: customSlug,
+      isCustomSlug = false,
     } = data;
 
     if (!imageUrl || !imageSize || !imageType) {
       throw new Error("Thiếu thông tin ảnh");
     }
 
-    let slug = customSlug?.trim() || nanoid(10);
-    while (await Image.findOne({ slug })) {
+    let slug;
+    if (customSlug?.trim()) {
+      const wanted = customSlug.trim();
+      if (isCustomSlug) {
+        const exists = await Image.findOne({ slug: wanted });
+        if (exists) {
+          const err = new Error("Slug already in use");
+          err.code = "SLUG_TAKEN";
+          throw err;
+        }
+        slug = wanted;
+      } else {
+        // preferred slug provided but not user-customized: try to find an available variant
+        let candidate = wanted;
+        let counter = 0;
+        while (await Image.findOne({ slug: candidate })) {
+          counter += 1;
+          candidate = `${wanted}-${counter}`;
+          if (counter > 500) break;
+        }
+        slug = candidate;
+      }
+    } else {
       slug = nanoid(10);
+      while (await Image.findOne({ slug })) {
+        slug = nanoid(10);
+      }
     }
 
     const hashedPassword = password
@@ -50,6 +75,36 @@ export class ImageService {
 
     await image.save();
     return this._sanitize(image, userId);
+  }
+
+  async generateUniqueSlug(preferred, isCustom = false) {
+    const base = preferred?.trim();
+    if (base) {
+      if (isCustom) {
+        const exists = await Image.findOne({ slug: base });
+        if (exists) {
+          const err = new Error("Slug already in use");
+          err.code = "SLUG_TAKEN";
+          throw err;
+        }
+        return base;
+      }
+
+      let candidate = base;
+      let counter = 0;
+      while (await Image.findOne({ slug: candidate })) {
+        counter += 1;
+        candidate = `${base}-${counter}`;
+        if (counter > 500) break;
+      }
+      return candidate;
+    }
+
+    let slug = nanoid(10);
+    while (await Image.findOne({ slug })) {
+      slug = nanoid(10);
+    }
+    return slug;
   }
 
   async getImageById(id, userId = null, password = null) {

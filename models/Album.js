@@ -29,6 +29,12 @@ const AlbumSchema = new Schema({
     enum: ["public", "unlisted", "private"],
     default: "private",
   },
+  images: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Image",
+    },
+  ],
 });
 
 export default model("Album", AlbumSchema);
