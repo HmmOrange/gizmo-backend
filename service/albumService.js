@@ -51,7 +51,8 @@ export class AlbumService {
     const album = await Album.findById(albumId);
     if (!album) throw Error("Album không tồn tại");
 
-    if (album.authorId !== userId) {
+    // compare owner IDs safely (account for ObjectId vs string)
+    if (!album.authorId || String(album.authorId) !== String(userId)) {
       throw Error("Bạn không có quyền chỉnh sửa album này");
     }
 
@@ -92,7 +93,7 @@ export class AlbumService {
     const album = await Album.findById(albumId);
     if (!album) throw Error("Album không tồn tại");
 
-    if (album.authorId !== userId) {
+    if (!album.authorId || String(album.authorId) !== String(userId)) {
       throw Error("Bạn không có quyền xóa album này");
     }
 
@@ -100,7 +101,7 @@ export class AlbumService {
   }
 
   async canAccessAlbum(album, userId = null) {
-    const isOwner = userId && album.authorId === userId;
+    const isOwner = userId && album.authorId && String(album.authorId) === String(userId);
 
     if (album.exposure === "public") return true;
     if (album.exposure === "unlisted") return true;
@@ -112,7 +113,7 @@ export class AlbumService {
   async listUserAlbums(userId, options = {}) {
     const { limit = 20, skip = 0, sort = { createdAt: -1 } } = options;
 
-    const albums = await Album.find({ author: userId })
+    const albums = await Album.find({ authorId: userId })
       .sort(sort)
       .skip(skip)
       .limit(limit)

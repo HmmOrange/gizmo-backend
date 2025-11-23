@@ -5,7 +5,12 @@ export const authUser = (req, res, next) => {
   if (!token) return res.status(401).json({ message: "missing_token" });
 
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Normalize token payload to provide `req.user.id` for consistency
+    req.user = {
+      id: decoded.user_id || decoded.userId || decoded.id || null,
+      ...(decoded || {}),
+    };
     next();
   } catch {
     res.status(401).json({ message: "invalid_token" });
@@ -27,7 +32,11 @@ export const optionalAuth = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    // Normalize token payload to provide `req.user.id` for consistency
+    req.user = {
+      id: decoded.user_id || decoded.userId || decoded.id || null,
+      ...(decoded || {}),
+    };
   } catch (err) {
     req.user = null;
   }
