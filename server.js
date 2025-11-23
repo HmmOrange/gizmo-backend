@@ -11,12 +11,13 @@ import passport from "passport";
 import imageRoutes from "./routes/imageRoutes.js";
 import albumRoutes from "./routes/albumRoutes.js";
 import shareRoutes from "./routes/shareRoutes.js";
+import Paste from "./models/TextPaste.js";
 
 const app = express();
 
 app.use(express.json());
 // Normalize frontend URL to avoid trailing-slash mismatch in CORS checks
-const FRONTEND_URL = (process.env.FRONTEND_URL || "http://localhost:5174").replace(/\/$/, "");
+const FRONTEND_URL = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -49,6 +50,21 @@ app.get("/", (req, res) => res.status(200).send("Backend is running"));
 app.use("/api/images", imageRoutes);
 app.use("/api/albums", albumRoutes);
 app.use("/share", shareRoutes);
+
+
+// ⬇ Debug route added here
+app.get("/debug-db", async (req, res) => {
+  try {
+    console.log("DEBUG: Testing DynamoDB...");
+    const result = await Paste.scan().limit(1).exec();
+    console.log("DEBUG: DynamoDB responded.");
+    res.json({ ok: true, count: result.length });
+  } catch (err) {
+    console.error("DEBUG ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // Debug: list mounted routes (for development only)
 app.get("/api/debug/routes", (req, res) => {
