@@ -15,7 +15,7 @@ export const uploadImage = async (req, res) => {
   try {
     console.log("Received upload request:", req.body);
 
-    const { slug, albumId, albumTitle } = req.body;
+    const { slug, albumId, albumTitle, albumExposure } = req.body;
     const file = req.file;
 
     if (!file) {
@@ -75,12 +75,16 @@ export const uploadImage = async (req, res) => {
         let albumDoc = await Album.findOne({ slug: finalAlbumId });
         if (!albumDoc) {
           // Create the album even if the uploader is not authenticated.
-          // authorId will be null when no authenticated user is present.
+          // Use provided albumExposure when available; otherwise default to private.
+          const requestedExposure = (req.body.albumExposure || "private").trim();
+          const allowed = new Set(["public", "unlisted", "private"]);
+          const finalExposure = allowed.has(requestedExposure) ? requestedExposure : "private";
           albumDoc = await Album.create({
             name: albumTitle || finalAlbumId,
             slug: finalAlbumId,
             description: "",
             authorId: req.user?.id || null,
+            exposure: finalExposure,
           });
         }
         albumObjectId = albumDoc._id;
@@ -97,6 +101,7 @@ export const uploadImage = async (req, res) => {
           imageSize: file.size,
           imageType,
           exposure: req.body.exposure || "public",
+          password: req.body.password || undefined,
           albumId: albumObjectId || null,
           isCustomSlug: isCustom,
         },

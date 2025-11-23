@@ -10,6 +10,7 @@ import oauthRoutes from "./routes/authOAuth.js";
 import passport from "passport";
 import imageRoutes from "./routes/imageRoutes.js";
 import albumRoutes from "./routes/albumRoutes.js";
+import shareRoutes from "./routes/shareRoutes.js";
 import Paste from "./models/TextPaste.js";
 
 const app = express();
@@ -48,6 +49,7 @@ app.get("/health", (req, res) => res.send("OK"));
 app.get("/", (req, res) => res.status(200).send("Backend is running"));
 app.use("/api/images", imageRoutes);
 app.use("/api/albums", albumRoutes);
+app.use("/share", shareRoutes);
 
 
 // ⬇ Debug route added here
