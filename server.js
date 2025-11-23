@@ -44,7 +44,7 @@ app.use("/api/auth/oauth", oauthRoutes);
 app.use("/paste", textPasteRoutes);
 app.use("/api/auth", authRoutes);
 app.get("/health", (req, res) => res.send("OK"));
-
+app.get("/", (req, res) => res.status(200).send("Backend is running"));
 app.use("/api/images", imageRoutes);
 app.use("/api/albums", albumRoutes);
 
