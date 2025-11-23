@@ -15,7 +15,7 @@ const app = express();
 
 app.use(express.json());
 // Normalize frontend URL to avoid trailing-slash mismatch in CORS checks
-const FRONTEND_URL = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
+const FRONTEND_URL = (process.env.FRONTEND_URL || "http://localhost:5174").replace(/\/$/, "");
 
 app.use(cors({
   origin: (origin, callback) => {
