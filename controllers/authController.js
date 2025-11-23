@@ -1,61 +1,47 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import User from "../models/User.js";
+import { UserService } from "../service/userService.js";
+
+const userService = new UserService();
 
 export async function signup(req, res) {
-  const { username, password, name } = req.body;
+  const { username, password, fullname, authMethod } = req.body;
 
-  if (!username || !password || !name)
-  return res.status(400).json({ message: "missing_fields" });
-
-  const existing = await User.findOne({ username });
-  if (existing) {
-    return res.status(409).json({ message: "username_taken" });
+  if (!username || !password || !fullname) {
+    return res.status(400).json({ message: "missing_fields" });
   }
 
-  const hash = await bcrypt.hash(password, 10);
+  try {
+    const payload = { username, password, fullname };
+    if (typeof authMethod === "string") payload.authMethod = authMethod;
 
-  await User.create({
-    username,
-    name,
-    hashedPassword: hash,
-    authMethod: null,   // explicit so format stays consistent
-    storageUsed: 0,     // optional since default exists
-  });
+    const user = await userService.register(payload);
 
-
-  return res.status(201).json({ message: "account_created" });
+    return res.status(201).json({ message: "account_created", user });
+  } catch (err) {
+    return res.status(400).json({ message: err.message });
+  }
 }
 
 export async function login(req, res) {
   const { username, password } = req.body;
 
-  console.log("BODY:", req.body);
+  try {
+    const user = await userService.login(username, password);
 
-  const user = await User.findOne({ username });
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      return res.status(500).json({ message: "server_error" });
+    }
 
-  console.log("FOUND USER:", user);
+    const token = jwt.sign(
+      { user_id: user.userId, username: user.username },
+      jwtSecret,
+      { expiresIn: "7d" }
+    );
 
-  if (!user) {
-    return res.status(401).json({ message: "invalid_credentials" });
+    return res.json({ token, user });
+  } catch (err) {
+    return res.status(401).json({ message: err.message });
   }
-
-  const match = await bcrypt.compare(password, user.hashedPassword);
-  if (!match) {
-    return res.status(401).json({ message: "invalid_credentials" });
-  }
-
-  const jwtSecret = process.env.JWT_SECRET;
-  if (!jwtSecret) {
-    console.error("JWT_SECRET is not set in environment variables");
-    return res.status(500).json({ message: "server_error" });
-  }
-
-  const token = jwt.sign(
-    { user_id: user._id, username: user.username },
-    jwtSecret,
-    { expiresIn: "7d" }
-  );
-
-  return res.json({ token });
 }

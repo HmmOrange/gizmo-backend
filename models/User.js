@@ -1,24 +1,37 @@
-import mongoose, { Schema, model } from "mongoose";
+import dynamoose from "../db/dynamo.js";
 
-const UserSchema = new Schema(
+const UserSchema = new dynamoose.Schema(
   {
+    userId: {
+      type: String,
+      hashKey: true,
+    },
     username: {
       type: String,
       required: true,
-      unique: true,
-      trim: true,
-      // minlength: 3,
-      index: true,
+      index: {
+        name: "usernameGlobalIndex",
+        type: "global",
+      },
     },
-    name: {
+    fullname: {
       type: String,
       required: true,
-      trim: true,
     },
-    hashedPassword: { type: String, default: null },
-    avatarUrl: { type: String, default: null },
-    storageUsed: { type: Number, default: 0, min: 0 },
-    maxStorage: { type: Number, default: 1024 * 1024 * 1024 },
+    hashedPassword: {
+      type: String,
+    },
+    avatarUrl: {
+      type: String,
+    },
+    storageUsed: {
+      type: Number,
+      default: 0,
+    },
+    maxStorage: {
+      type: Number,
+      default: 1024 * 1024 * 1024,
+    },
     status: {
       type: String,
       enum: ["active", "banned", "deleted"],
@@ -26,11 +39,16 @@ const UserSchema = new Schema(
     },
     authMethod: {
       type: String,
-      enum: [null, "google", "github", "microsoft", "apple"],
-      default: null,
+      enum: ["google", "github", "microsoft", "apple"],
+      default: undefined,
+      required: false,
     },
+
+
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-export default model("User", UserSchema);
+export default dynamoose.model("Users", UserSchema);
