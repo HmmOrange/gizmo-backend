@@ -70,21 +70,25 @@ export const uploadImage = async (req, res) => {
       // ensure an Album document exists (create if missing). We will NOT change S3 key based on album.
       const normalizedAlbumId = albumId?.trim();
       let finalAlbumId = normalizedAlbumId && normalizedAlbumId !== "images" ? normalizedAlbumId : null;
+      let albumObjectId = null;
       if (finalAlbumId) {
-        const existing = await Album.findOne({ slug: finalAlbumId });
-        if (!existing) {
-          await Album.create({
+        let albumDoc = await Album.findOne({ slug: finalAlbumId });
+        if (!albumDoc) {
+          // Create the album even if the uploader is not authenticated.
+          // authorId will be null when no authenticated user is present.
+          albumDoc = await Album.create({
             name: albumTitle || finalAlbumId,
             slug: finalAlbumId,
             description: "",
             authorId: req.user?.id || null,
           });
         }
+        albumObjectId = albumDoc._id;
       }
 
       const imageType = file.mimetype?.split("/")?.[1] || "png";
 
-      // We will not store albumId on the image document; instead store reference in Album.images
+      // Store albumId in the image metadata if provided; file still uploaded under `images/`
       const saved = await imageService.createImage(
         {
           caption: req.body.caption || "",
@@ -93,20 +97,16 @@ export const uploadImage = async (req, res) => {
           imageSize: file.size,
           imageType,
           exposure: req.body.exposure || "public",
-          albumId: null,
+          albumId: albumObjectId || null,
           isCustomSlug: isCustom,
         },
         req.user?.id || null
       );
 
       // If an album was specified, add a reference to this image in the album document
-      if (finalAlbumId) {
+      if (albumObjectId) {
         try {
-          await Album.findOneAndUpdate(
-            { slug: finalAlbumId },
-            { $push: { images: saved._id } },
-            { upsert: false }
-          );
+          await Album.findByIdAndUpdate(albumObjectId, { $push: { images: saved._id } }, { upsert: false });
         } catch (pushErr) {
           console.error("Failed to push image into album.images:", pushErr);
         }

@@ -14,8 +14,17 @@ import albumRoutes from "./routes/albumRoutes.js";
 const app = express();
 
 app.use(express.json());
+// Normalize frontend URL to avoid trailing-slash mismatch in CORS checks
+const FRONTEND_URL = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  origin: (origin, callback) => {
+    // allow requests like curl/postman (no origin)
+    if (!origin) return callback(null, true);
+    if (origin === FRONTEND_URL) return callback(null, true);
+    // otherwise reject
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 app.use(passport.initialize());
@@ -44,18 +53,21 @@ app.get("/api/debug/routes", (req, res) => {
   try {
     const routes = [];
     app._router.stack.forEach((middleware) => {
-      if (middleware.route) {
+      if (middleware && middleware.route) {
         // routes registered directly on the app
         const methods = Object.keys(middleware.route.methods).join(",");
         routes.push({ path: middleware.route.path, methods });
-      } else if (middleware.name === "router") {
-        // router middleware
-        middleware.handle.stack.forEach((handler) => {
-          if (handler.route) {
-            const methods = Object.keys(handler.route.methods).join(",");
-            routes.push({ path: handler.route.path, methods });
-          }
-        });
+      } else if (middleware && middleware.name === "router") {
+        // router middleware: guard for unexpected shapes
+        const handlers = middleware.handle && middleware.handle.stack;
+        if (Array.isArray(handlers)) {
+          handlers.forEach((handler) => {
+            if (handler && handler.route) {
+              const methods = Object.keys(handler.route.methods).join(",");
+              routes.push({ path: handler.route.path, methods });
+            }
+          });
+        }
       }
     });
     res.json({ routes });
@@ -74,16 +86,19 @@ app.listen(PORT, () => {
   try {
     console.log('Registered routes:');
     app._router.stack.forEach((middleware) => {
-      if (middleware.route) {
+      if (middleware && middleware.route) {
         const methods = Object.keys(middleware.route.methods).join(',');
         console.log(`${methods} ${middleware.route.path}`);
-      } else if (middleware.name === 'router') {
-        middleware.handle.stack.forEach((handler) => {
-          if (handler.route) {
-            const methods = Object.keys(handler.route.methods).join(',');
-            console.log(`${methods} ${handler.route.path}`);
-          }
-        });
+      } else if (middleware && middleware.name === 'router') {
+        const handlers = middleware.handle && middleware.handle.stack;
+        if (Array.isArray(handlers)) {
+          handlers.forEach((handler) => {
+            if (handler && handler.route) {
+              const methods = Object.keys(handler.route.methods).join(',');
+              console.log(`${methods} ${handler.route.path}`);
+            }
+          });
+        }
       }
     });
   } catch (e) {

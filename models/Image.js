@@ -31,7 +31,8 @@ const ImageSchema = new Schema(
       index: true,
     },
     albumId: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: "Album",
       default: null,
     },
   },

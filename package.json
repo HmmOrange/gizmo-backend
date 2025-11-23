@@ -28,6 +28,7 @@
     "passport-azure-ad": "^4.3.5",
     "pdfkit": "^0.17.2",
     "puppeteer": "^24.30.0",
+    "stack": "^0.1.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {

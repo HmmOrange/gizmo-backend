@@ -18,7 +18,7 @@ const AlbumSchema = new Schema({
   },
   authorId: {
     type: String,
-    required: true,
+    default: null,
   },
   createdAt: {
     type: Date,
