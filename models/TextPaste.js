@@ -1,43 +1,47 @@
-import mongoose, { Schema, model } from "mongoose";
+import dynamoose from "../db/dynamo.js";
 
-const PasteSchema = new Schema(
+const PasteSchema = new dynamoose.Schema(
   {
     slug: {
       type: String,
-      unique: true,
-      sparse: true,
-      trim: true,
+      hashKey: true,
     },
     title: {
       type: String,
       required: true,
-      trim: true,
     },
     content: {
       type: String,
       required: true,
     },
-    hashedPassword: {
-      type: String,
-      default: null,
-    },
+    hashedPassword: String,
     exposure: {
       type: String,
       enum: ["public", "password_protected", "unlisted", "private"],
       default: "public",
-      required: true,
     },
-    views: { type: Number, default: 0 },
-    expiredAt: { type: Date, default: null },
+    views: {
+      type: Number,
+      default: 0,
+    },
+    expiredAt: {
+      type: Number,
+      index: {
+        type: "ttl",
+        ttl: true,
+      },
+    },
     authorId: {
       type: String,
-      default: null,
-      index: true,
+      index: {
+        type: "global",
+      },
     },
+    dateDeleted: String,
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-PasteSchema.index({ expiredAt: 1 }, { expireAfterSeconds: 0 });
-
-export default model("Paste", PasteSchema);
+export default dynamoose.model("Pastes", PasteSchema);
