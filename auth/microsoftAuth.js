@@ -3,6 +3,9 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import AuthProvider from "../models/AuthProvider.js";
 
+const FRONTEND_URL = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
+const BACKEND_URL = (process.env.BACKEND_URL || "").replace(/\/$/, "");
+
 const msalConfig = {
   auth: {
     clientId: process.env.AZURE_CLIENT_ID,
@@ -15,7 +18,7 @@ console.log("🔧 MSAL CONFIG LOADED:");
 console.log({
   clientId: msalConfig.auth.clientId,
   authority: msalConfig.auth.authority,
-  redirectUri: process.env.AZURE_REDIRECT_URI,
+  redirectUri: `${BACKEND_URL}/api/auth/oauth/microsoft/callback`,
 });
 
 const pca = new ConfidentialClientApplication(msalConfig);
@@ -26,13 +29,12 @@ pca.getLogger().verboseEnabled = true;
 pca.getLogger().warningEnabled = true;
 pca.getLogger().errorEnabled = true;
 
-
 export async function redirectToMicrosoft(req, res) {
   console.log("\n📍 [STEP 1] redirectToMicrosoft HIT");
 
   const authCodeUrlParameters = {
     scopes: ["openid", "profile", "email"],
-    redirectUri: process.env.AZURE_REDIRECT_URI,
+    redirectUri: `${BACKEND_URL}/api/auth/oauth/microsoft/callback`,
     prompt: "select_account",
   };
 
@@ -48,8 +50,6 @@ export async function redirectToMicrosoft(req, res) {
   }
 }
 
-
-
 export async function handleMicrosoftCallback(req, res) {
   console.log("\n📍 [STEP 2] Callback HIT");
   console.log("🌐 Raw Query Params:", req.query);
@@ -61,7 +61,7 @@ export async function handleMicrosoftCallback(req, res) {
 
   const tokenRequest = {
     code: req.query.code,
-    redirectUri: process.env.AZURE_REDIRECT_URI,
+    redirectUri: `${BACKEND_URL}/api/auth/oauth/microsoft/callback`,
     scopes: ["openid", "profile", "email"],
   };
 
@@ -80,8 +80,9 @@ export async function handleMicrosoftCallback(req, res) {
     const microsoftId = response.uniqueId;
     const email = response.account.username;
 
-    // Database flow logging
-    console.log(`🔎 Searching for AuthProvider (provider=microsoft, providerUserId=${microsoftId})`);
+    console.log(
+      `🔎 Searching for AuthProvider (provider=microsoft, providerUserId=${microsoftId})`
+    );
 
     let provider = await AuthProvider.findOne({
       provider: "microsoft",
