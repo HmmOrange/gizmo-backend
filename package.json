@@ -15,6 +15,7 @@
     "'": "github:aws-sdk/client-s3",
     "@aws-sdk/client-dynamodb": "^3.936.0",
     "@aws-sdk/lib-dynamodb": "^3.936.0",
+    "@azure/ai-language-text": "^1.1.0",
     "@azure/msal-node": "^3.8.2",
     "aws-sdk": "^2.1692.0",
     "bcrypt": "^6.0.0",
