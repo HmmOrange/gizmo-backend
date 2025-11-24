@@ -9,14 +9,14 @@ const apiKey = process.env.AZURE_LANGUAGE_KEY;
 const client = new TextAnalysisClient(endpoint, new AzureKeyCredential(apiKey));
 
 export async function summarizeText(text) {
-    console.log("Input Text:", text);  // Kiểm tra giá trị text
+    console.log("Input Text:", text);
 
     if (!text || typeof text !== "string") {
         throw new Error("Invalid text input");
     }
 
     const documents = [{ id: "1", text: text }];
-    console.log("Documents to send:", JSON.stringify(documents, null, 2)); // Log documents dưới dạng JSON
+    console.log("Documents to send:", JSON.stringify(documents, null, 2));
 
     try {
         const actions = [
