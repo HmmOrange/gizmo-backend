@@ -73,7 +73,22 @@ export const shareImage = async (req, res) => {
 
     // Access check: image exposure governs access regardless of album
     const userId = req.user?.id || null;
-    await imageService.canAccessImage(image, userId, password);
+    try {
+      await imageService.canAccessImage(image, userId, password);
+    } catch (err) {
+      // If error is password required, return requirePassword: true
+      if (String(err.message).toLowerCase().includes("yêu cầu mật khẩu")) {
+        return res.status(200).json({ requirePassword: true, message: "Password required to view this image." });
+      }
+      // Other permission errors
+      if (String(err.message).toLowerCase().includes("quyền") || String(err.message).toLowerCase().includes("permission") || String(err.message).toLowerCase().includes("không có quyền")) {
+        return res.status(403).json({ message: "You do not have permission to view this image." });
+      }
+      if (String(err.message).toLowerCase().includes("password")) {
+        return res.status(401).json({ message: err.message });
+      }
+      return res.status(500).json({ message: "Server error" });
+    }
 
     // Increment views and return sanitized
     await imageService.incrementViews(image._id);
@@ -81,12 +96,6 @@ export const shareImage = async (req, res) => {
     return res.json({ image: sanitized });
   } catch (err) {
     console.error("shareImage error:", err);
-    if (String(err.message).toLowerCase().includes("password")) {
-      return res.status(401).json({ message: err.message });
-    }
-    if (String(err.message).toLowerCase().includes("quyền") || String(err.message).toLowerCase().includes("permission") || String(err.message).toLowerCase().includes("không có quyền")) {
-      return res.status(403).json({ message: err.message });
-    }
     res.status(500).json({ message: "Server error" });
   }
 };

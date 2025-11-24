@@ -6,7 +6,7 @@ export class AlbumService {
     const { name, description = "", exposure = "private", slug } = data;
 
     if (!name?.trim()) {
-      throw Error("Tên album là bắt buộc");
+      throw Error("Album name is required");
     }
 
     let finalSlug = slug?.trim() || nanoid(12);
@@ -31,7 +31,7 @@ export class AlbumService {
 
   async getAlbumById(id, userId = null) {
     const album = await Album.findById(id);
-    if (!album) throw Error("Album không tồn tại");
+    if (!album) throw Error("Album does not exist");
 
     await this.canAccessAlbum(album, userId);
 
@@ -40,7 +40,7 @@ export class AlbumService {
 
   async getAlbumBySlug(slug, userId = null) {
     const album = await Album.findOne({ slug });
-    if (!album) throw Error("Album không tồn tại");
+    if (!album) throw Error("Album does not exist");
 
     await this.canAccessAlbum(album, userId);
 
@@ -49,11 +49,11 @@ export class AlbumService {
 
   async updateAlbum(albumId, updates, userId) {
     const album = await Album.findById(albumId);
-    if (!album) throw Error("Album không tồn tại");
+    if (!album) throw Error("Album does not exist");
 
     // compare owner IDs safely (account for ObjectId vs string)
     if (!album.authorId || String(album.authorId) !== String(userId)) {
-      throw Error("Bạn không có quyền chỉnh sửa album này");
+      throw Error("You do not have permission to edit this album");
     }
 
     const allowed = ["name", "description", "exposure", "slug"];
@@ -78,7 +78,7 @@ export class AlbumService {
         slug: newSlug,
         _id: { $ne: albumId },
       });
-      if (existing) throw Error("Slug đã được sử dụng");
+      if (existing) throw Error("Slug is already in use");
 
       filtered.slug = newSlug;
     }
@@ -91,10 +91,10 @@ export class AlbumService {
 
   async deleteAlbum(albumId, userId) {
     const album = await Album.findById(albumId);
-    if (!album) throw Error("Album không tồn tại");
+    if (!album) throw Error("Album does not exist");
 
     if (!album.authorId || String(album.authorId) !== String(userId)) {
-      throw Error("Bạn không có quyền xóa album này");
+      throw Error("You do not have permission to delete this album");
     }
 
     await album.deleteOne();
@@ -107,7 +107,7 @@ export class AlbumService {
     if (album.exposure === "unlisted") return true;
     if (album.exposure === "private" && isOwner) return true;
 
-    throw Error("Bạn không có quyền xem album này");
+    throw Error("You do not have permission to view this album");
   }
 
   async listUserAlbums(userId, options = {}) {

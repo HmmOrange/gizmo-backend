@@ -20,7 +20,7 @@ export class ImageService {
     } = data;
 
     if (!imageUrl || !imageSize || !imageType) {
-      throw new Error("Thiếu thông tin ảnh");
+      throw new Error("Missing image information");
     }
 
     let slug;
@@ -57,7 +57,7 @@ export class ImageService {
       : null;
 
     if (exposure === "private" && !userId) {
-      throw new Error("Ảnh private cần đăng nhập");
+      throw new Error("Private images require login");
     }
 
     const image = new Image({
@@ -109,7 +109,7 @@ export class ImageService {
 
   async getImageById(id, userId = null, password = null) {
     const image = await Image.findById(id);
-    if (!image) throw new Error("Ảnh không tồn tại");
+    if (!image) throw new Error("Image does not exist");
     await this._checkExpired(image);
     await this.canAccessImage(image, userId, password);
     await this.incrementViews(image._id);
@@ -118,7 +118,7 @@ export class ImageService {
 
   async getImageBySlug(slug, password = null) {
     const image = await Image.findOne({ slug });
-    if (!image) throw new Error("Ảnh không tồn tại");
+    if (!image) throw new Error("Image does not exist");
     await this._checkExpired(image);
     await this.canAccessImage(image, null, password);
     await this.incrementViews(image._id);
@@ -131,9 +131,9 @@ export class ImageService {
 
   async updateImage(id, updates, userId) {
     const image = await Image.findById(id);
-    if (!image) throw new Error("Ảnh không tồn tại");
+    if (!image) throw new Error("Image does not exist");
     if (image.authorId && image.authorId.toString() !== userId) {
-      throw new Error("Không có quyền");
+      throw new Error("No permission");
     }
 
     const allowed = ["caption", "exposure", "albumId", "expiredAt", "password"];
@@ -168,9 +168,9 @@ export class ImageService {
 
   async setPassword(id, newPassword, userId) {
     const image = await Image.findById(id);
-    if (!image) throw new Error("Ảnh không tồn tại");
+    if (!image) throw new Error("Image does not exist");
     if (image.authorId && image.authorId.toString() !== userId) {
-      throw new Error("Không có quyền");
+      throw new Error("No permission");
     }
     image.hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
     image.exposure = "password_protected";
@@ -179,9 +179,9 @@ export class ImageService {
 
   async deleteImage(id, userId) {
     const image = await Image.findById(id);
-    if (!image) return; // đã xóa rồi
+    if (!image) return; // already deleted
     if (image.authorId && image.authorId.toString() !== userId) {
-      throw new Error("Không có quyền xóa");
+      throw new Error("No permission to delete");
     }
     await image.deleteOne();
   }
@@ -193,12 +193,18 @@ export class ImageService {
     if (image.exposure === "unlisted") return true;
     if (image.exposure === "private" && isOwner) return true;
     if (image.exposure === "password_protected") {
-      if (!password) throw new Error("Yêu cầu mật khẩu");
-      const match = await bcrypt.compare(password, image.hashedPassword || "");
-      if (!match) throw new Error("Mật khẩu sai");
+      if (!image.hashedPassword) throw new Error("This image does not have a password set");
+      if (!password) throw new Error("Password required");
+      let match = false;
+      try {
+        match = await bcrypt.compare(password, image.hashedPassword);
+      } catch (err) {
+        throw new Error("Password authentication error");
+      }
+      if (!match) throw new Error("Incorrect password");
       return true;
     }
-    throw new Error("Bạn không có quyền xem ảnh này");
+    throw new Error("You do not have permission to view this image");
   }
 
   async listUserImages(userId, options = {}) {
@@ -254,9 +260,9 @@ export class ImageService {
 
   async moveImageToAlbum(imageId, albumId, userId) {
     const image = await Image.findById(imageId);
-    if (!image) throw new Error("Ảnh không tồn tại");
+    if (!image) throw new Error("Image does not exist");
     if (image.authorId && image.authorId.toString() !== userId) {
-      throw new Error("Không có quyền");
+      throw new Error("No permission");
     }
     image.albumId = albumId || null;
     await image.save();
@@ -266,7 +272,7 @@ export class ImageService {
   async _checkExpired(image) {
     if (image.expiredAt && image.expiredAt < new Date()) {
       await image.deleteOne();
-      throw new Error("Ảnh đã hết hạn");
+      throw new Error("Image has expired");
     }
   }
 
