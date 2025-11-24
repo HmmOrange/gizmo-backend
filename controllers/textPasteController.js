@@ -85,3 +85,39 @@ export const summarizePaste = async (req, res) => {
         res.status(500).json({ error: "Failed summarizing" });
     }
 };
+
+export const favouritePaste = async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(req.user)
+        console.log("Favouriting paste:", id);
+        const paste = await pasteService.favouritePaste(id, req.user.user_id);
+        console.log(paste.favouriteCount)
+        res.json({ slug: paste.slug, favouriteCount: paste.favouriteCount });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+};
+
+export const unfavouritePaste = async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(req.user)
+        console.log("UnFavouriting paste:", id);
+        const paste = await pasteService.unfavouritePaste(id, req.user.user_id);
+        res.json({ slug: paste.slug, favouriteCount: paste.favouriteCount });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+};
+
+export const getFavouritePaste = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user?.user_id || null;
+        const paste = await pasteService.getFavouritePaste(id, userId);
+        res.json(paste);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+};
