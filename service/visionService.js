@@ -1,7 +1,5 @@
 import { ComputerVisionClient } from "@azure/cognitiveservices-computervision";
 import { ApiKeyCredentials } from "@azure/ms-rest-js";
-import fs from "fs";
-
 const key = process.env.AZURE_VISION_KEY;
 const endpoint = process.env.AZURE_VISION_ENDPOINT;
 
@@ -10,10 +8,9 @@ const client = new ComputerVisionClient(
   endpoint
 );
 
-// OCR local file
-export async function readImageOCR(filePath) {
-  const stream = fs.readFileSync(filePath);
-  const result = await client.readInStream(stream);
+// OCR buffer
+export async function readImageOCR(buffer) {
+  const result = await client.readInStream(buffer);
   const operationId = result.operationLocation.split("/").slice(-1)[0];
 
   let readResult;
