@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import puppeteer from "puppeteer";
 import PDFDocument from "pdfkit";
 import { summarizeText } from "../utils/azureSummary.js";
+import { marked } from "marked";
 export class PasteService {
     async createPaste(data, user) {
         const { title, content, password, expiredAt, slug, exposure } = data;
@@ -71,7 +72,6 @@ export class PasteService {
         if (paste.expiredAt && paste.expiredAt <= now) throw new Error("NotFound");
 
         this.checkAccess(paste, user, password);
-
         return await Paste.update(
             { slug: id },
             { views: (paste.views || 0) + 1 }
@@ -159,4 +159,20 @@ export class PasteService {
 
         return { title: paste.title, summary };
     }
+    async addFavourite(slug) {
+        const paste = await Paste.get(slug);
+        if (!paste) throw new Error("Paste not found");
+
+        paste.favouriteCount = (paste.favouriteCount || 0) + 1;
+        await paste.save();
+        return paste;
+    };
+    async removeFavourite(slug) {
+        const paste = await Paste.get(slug);
+        if (!paste) throw new Error("Paste not found");
+
+        paste.favouriteCount = Math.max((paste.favouriteCount || 0) - 1, 0);
+        await paste.save();
+        return paste;
+    };
 }
