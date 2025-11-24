@@ -12,6 +12,7 @@ import imageRoutes from "./routes/imageRoutes.js";
 import albumRoutes from "./routes/albumRoutes.js";
 import shareRoutes from "./routes/shareRoutes.js";
 import Paste from "./models/TextPaste.js";
+import ocrRoutes from "./routes/ocr.js";
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.get("/", (req, res) => res.status(200).send("Backend is running"));
 app.use("/api/images", imageRoutes);
 app.use("/api/albums", albumRoutes);
 app.use("/share", shareRoutes);
+app.use("/api", ocrRoutes);
 
 
 // ⬇ Debug route added here
