@@ -1,6 +1,6 @@
-import mongoose, { Schema, model } from "mongoose";
+import dynamoose from "../db/dynamo.js";
 
-const ImageSchema = new Schema(
+const ImageSchema = new dynamoose.Schema(
   {
     caption: { type: String, default: "" },
     slug: {
@@ -31,7 +31,7 @@ const ImageSchema = new Schema(
       index: true,
     },
     albumId: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: "Album",
       default: null,
     },
@@ -39,6 +39,4 @@ const ImageSchema = new Schema(
   { timestamps: true }
 );
 
-ImageSchema.index({ expiredAt: 1 }, { expireAfterSeconds: 0 });
-
-export default model("Image", ImageSchema);
+export default dynamoose.model("Image", ImageSchema);

@@ -1,6 +1,6 @@
-import mongoose, { Schema, model } from "mongoose";
+import dynamoose from "../db/dynamo.js";
 
-const AlbumSchema = new Schema({
+const AlbumSchema = new dynamoose.Schema({
   name: {
     type: String,
     required: true,
@@ -31,10 +31,10 @@ const AlbumSchema = new Schema({
   },
   images: [
     {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: "Image",
     },
   ],
 });
 
-export default model("Album", AlbumSchema);
+export default dynamoose.model("Album", AlbumSchema);
