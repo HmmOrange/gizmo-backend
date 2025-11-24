@@ -1,0 +1,21 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+  pre_build:
+    commands:
+      - echo "Installing dependencies..."
+      - npm ci --only=production 
+  build:
+    commands:
+      - echo "Build completed - preparing deployment package..."
+  post_build:
+    commands:
+      - echo "Deployment package ready!"
+
+artifacts:
+  files:
+    - '**/*'                        
+  discard-paths: yes
