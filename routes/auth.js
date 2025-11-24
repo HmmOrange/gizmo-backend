@@ -20,7 +20,8 @@ router.post("/signup", async (req, res) => {
 router.post("/login", login);
 
 router.get("/me", authUser, async (req, res) => {
-  const user = await User.findById(req.user.user_id).select("-password_hash");
+  const user = await User.get(req.user.id);
+  if (user) delete user.hashedPassword;
   res.json(user);
 });
 

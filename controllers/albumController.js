@@ -4,7 +4,14 @@ export const listAlbums = async (req, res) => {
   try {
     // Return latest 100 albums (for simplicity). In future filter by user/public.
     const albums = await Album.find({}).sort({ createdAt: -1 }).limit(100).lean();
-    const sanitized = albums.map(a => ({ _id: a._id, name: a.name, slug: a.slug, description: a.description, exposure: a.exposure }));
+    const sanitized = albums.map(a => ({
+      _id: a._id,
+      name: a.name,
+      slug: a.slug,
+      description: a.description,
+      exposure: a.exposure,
+      authorId: a.authorId
+    }));
     res.json({ albums: sanitized });
   } catch (err) {
     console.error("List albums error:", err);
