@@ -12,7 +12,9 @@ export const createPaste = async (req, res) => {
 
 export const getPublicPastes = async (req, res) => {
     try {
+        console.log("Fetching public pastes");
         const pastes = await pasteService.getPublicPastes();
+        console.log(pastes);
         res.json(pastes);
     } catch (err) {
         res.status(500).json({ error: err.message });

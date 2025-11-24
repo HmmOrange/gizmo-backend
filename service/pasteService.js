@@ -42,11 +42,11 @@ export class PasteService {
     async getPublicPastes() {
         const now = Math.floor(Date.now() / 1000);
 
-        return await Paste.query("exposure")
+        return await Paste.scan("exposure")
             .eq("public")
-            .filter("expiredAt")
-            .ge(now)
-            .sort("descending")
+            // .filter("expiredAt")
+            // .ge(now)
+            // .sort("descending")
             .exec();
     }
 
