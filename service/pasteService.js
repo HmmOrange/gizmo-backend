@@ -51,15 +51,29 @@ export class PasteService {
         return await Paste.create(item);
     }
 
-    async getPublicPastes() {
-        const now = Math.floor(Date.now() / 1000);
-
-        return await Paste.scan("exposure")
+    async getPublicPastes(sortBy = "newest") {
+        let pastes = await Paste.scan("exposure")
             .eq("public")
-            // .filter("expiredAt")
-            // .ge(now)
-            // .sort("descending")
             .exec();
+        // pastes = pastes.filter(p => !p.expiredAt || p.expiredAt > now);
+        // console.log("Public pastes fetched:", pastes.length,);
+        // SORT
+        if (sortBy === "views") {
+            pastes.sort((a, b) => (b.views || 0) - (a.views || 0));
+        }
+        else if (sortBy === "bookmark") {
+            pastes.sort((a, b) => (b.bookmarks || 0) - (a.bookmarks || 0));
+        }
+        else { // newest (default)
+            pastes.sort((a, b) => {
+                const ad = new Date(a.createdAt || 0).getTime();
+                const bd = new Date(b.createdAt || 0).getTime();
+                return bd - ad;
+            });
+        }
+        console.log("Public pastes sorted.");
+
+        return pastes;
     }
 
     checkAccess(paste, user, password) {
