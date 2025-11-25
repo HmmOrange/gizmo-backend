@@ -1,34 +1,31 @@
-import mongoose, { Schema, model } from "mongoose";
+import dynamoose from "../db/dynamo.js";
 
-const AuthProviderSchema = new Schema({
-  userId: {
-    type: String,
-    required: true,
+const AuthProviderSchema = new dynamoose.Schema(
+  {
+    id: {
+      type: String,
+      hashKey: true,
+    },
+    userId: {
+      type: String,
+      required: true,
+    },
+    provider: {
+      type: String,
+      required: true,
+    },
+    providerUserId: {
+      type: String,
+      required: true,
+      index: {
+        name: "providerUserIndex",
+        type: "global",
+      },
+    },
   },
-  provider: {
-    type: String,
-    enum: ["google", "github", "microsoft", "apple"],
-    required: true,
-  },
-  providerUserId: {
-    type: String,
-    required: true,
-  },
-  accessToken: {
-    type: String,
-    default: null,
-  },
-  refreshToken: {
-    type: String,
-    default: null,
-  },
-  expiredAt: {
-    type: Date,
-    default: null,
-  },
-});
+  {
+    timestamps: true,
+  }
+);
 
-AuthProviderSchema.index({ userId: 1, provider: 1 }, { unique: true });
-AuthProviderSchema.index({ provider: 1, providerUserId: 1 }, { unique: true });
-
-export default model("AuthProvider", AuthProviderSchema);
+export default dynamoose.model("AuthProviders", AuthProviderSchema);

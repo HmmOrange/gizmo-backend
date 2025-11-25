@@ -1,5 +1,6 @@
 import { ConfidentialClientApplication } from "@azure/msal-node";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import User from "../models/User.js";
 import AuthProvider from "../models/AuthProvider.js";
 
@@ -23,7 +24,6 @@ console.log({
 
 const pca = new ConfidentialClientApplication(msalConfig);
 
-// Enable verbose MSAL logging
 pca.getLogger().infoEnabled = true;
 pca.getLogger().verboseEnabled = true;
 pca.getLogger().warningEnabled = true;
@@ -33,7 +33,7 @@ export async function redirectToMicrosoft(req, res) {
   console.log("\n📍 [STEP 1] redirectToMicrosoft HIT");
 
   const authCodeUrlParameters = {
-    scopes: ["openid", "profile", "email"],
+    scopes: ["openid", "profile", "email", "offline_access"],
     redirectUri: `${BACKEND_URL}/api/auth/oauth/microsoft/callback`,
     prompt: "select_account",
   };
@@ -55,14 +55,14 @@ export async function handleMicrosoftCallback(req, res) {
   console.log("🌐 Raw Query Params:", req.query);
 
   if (!req.query.code) {
-    console.log("❌ No `code` received in callback. Something is wrong.");
+    console.log("❌ No `code` received in callback.");
     return res.redirect(`${FRONTEND_URL}/login?error=missing_code`);
   }
 
   const tokenRequest = {
     code: req.query.code,
     redirectUri: `${BACKEND_URL}/api/auth/oauth/microsoft/callback`,
-    scopes: ["openid", "profile", "email"],
+    scopes: ["openid", "profile", "email", "offline_access"],
   };
 
   console.log("➡️ Token request object:", tokenRequest);
@@ -70,58 +70,65 @@ export async function handleMicrosoftCallback(req, res) {
   try {
     const response = await pca.acquireTokenByCode(tokenRequest);
 
-    console.log("🎉 Token successfully acquired from Microsoft:");
+    console.log("🎉 Token acquired from Microsoft:");
     console.log({
       uniqueId: response.uniqueId,
       username: response.account?.username,
-      idTokenClaims: response.idTokenClaims,
+      claims: response.idTokenClaims,
     });
 
     const microsoftId = response.uniqueId;
     const email = response.account.username;
 
-    console.log(
-      `🔎 Searching for AuthProvider (provider=microsoft, providerUserId=${microsoftId})`
-    );
+    console.log(`🔎 Searching AuthProvider for microsoftId=${microsoftId}`);
 
-    let provider = await AuthProvider.findOne({
-      provider: "microsoft",
-      providerUserId: microsoftId,
-    });
+    let provider = await AuthProvider.scan("providerUserId")
+      .eq(microsoftId)
+      .limit(1)
+      .exec();
+
+    provider = provider[0];
 
     let user;
 
     if (!provider) {
-      console.log("⚠️ No provider found. Checking if user exists...");
+      console.log("⚠️ No provider found. Checking user...");
 
-      user = await User.findOne({ username: email });
+      let existingUser = await User.scan("username").eq(email).limit(1).exec();
+      existingUser = existingUser[0];
 
-      if (!user) {
-        console.log("🆕 Creating new user for Microsoft login:", email);
-        user = await User.create({
+      if (!existingUser) {
+        console.log("🆕 Creating new user:", email);
+
+        existingUser = await User.create({
+          userId: crypto.randomUUID(),
           username: email,
-          hashedPassword: null,
+          fullname: response.idTokenClaims.name || email,
           authMethod: "microsoft",
         });
       } else {
-        console.log("✔ Found existing user:", user.username);
+        console.log("✔ Existing user found:", existingUser.username);
       }
 
-      console.log("🆕 Linking Microsoft account to user...");
+      console.log("🆕 Creating new AuthProvider entry...");
       provider = await AuthProvider.create({
-        userId: user._id,
+        id: crypto.randomUUID(),
+        userId: existingUser.userId,
         provider: "microsoft",
         providerUserId: microsoftId,
       });
+
+      user = existingUser;
     } else {
-      console.log("✔ Provider exists; retrieving linked user...");
-      user = await User.findById(provider.userId);
+      console.log("✔ Provider exists; retrieving user...");
+      user = await User.get(provider.userId);
+      console.log("✔ User found:", user);
     }
 
     console.log("🔐 Generating JWT for:", user.username);
 
     const jwtToken = jwt.sign(
-      { user_id: user._id, username: email },
+      { user_id: user.userId, username: email },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -130,9 +137,7 @@ export async function handleMicrosoftCallback(req, res) {
 
     res.redirect(`${FRONTEND_URL}/auth/success?token=${encodeURIComponent(jwtToken)}`);
   } catch (error) {
-    console.error("\n❌ FATAL OAUTH ERROR in callback:");
-    console.error(error);
-
+    console.error("\n❌ FATAL OAUTH ERROR:", error);
     return res.redirect(`${FRONTEND_URL}/login?error=oauth_failed`);
   }
 }
