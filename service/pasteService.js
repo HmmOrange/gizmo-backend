@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import puppeteer from "puppeteer";
 import PDFDocument from "pdfkit";
 import { summarizeText } from "../utils/azureSummary.js";
+import { marked } from "marked";
 export class PasteService {
     generateId(length = 6) {
         const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -138,37 +139,98 @@ export class PasteService {
                 content: paste.content,
             };
         }
-
+        console.log("Exporting paste:", paste.content);
+        const render = marked.parse(paste.content || "");
+        console.log("Rendered content for export.", render);
         if (format === "png") {
-            const browser = await puppeteer.launch();
+            const browser = await puppeteer.launch({ headless: "new" });
             const page = await browser.newPage();
-            await page.setContent(
-                `<pre style='font-family: monospace; font-size: 16px;'>${paste.content
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")}</pre>`
-            );
+
+            const html = `
+        <html>
+            <head>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        padding: 20px;
+                    }
+                    h1, h2, h3, h4 {
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                    }
+                    p {
+                        margin-bottom: 8px;
+                    }
+                    pre, code {
+                        background: #f4f4f4;
+                        padding: 10px;
+                        border-radius: 5px;
+                        display: block;
+                        white-space: pre-wrap;
+                        font-family: monospace;
+                    }
+                    strong { font-weight: bold; }
+                    em { font-style: italic; }
+                    li { margin-bottom: 4px; }
+                </style>
+            </head>
+            <body>${render}</body>
+        </html>
+    `;
+
+            await page.setContent(html, { waitUntil: "networkidle0" });
+
             const buffer = await page.screenshot({ fullPage: true });
+
             await browser.close();
 
             return { type: "png", filename: `${paste.slug}.png`, content: buffer };
         }
 
         if (format === "pdf") {
-            const doc = new PDFDocument();
-            let chunks = [];
+            const browser = await puppeteer.launch({ headless: "new" });
+            const page = await browser.newPage();
 
-            doc.on("data", (chunk) => chunks.push(chunk));
-            return new Promise((resolve) => {
-                doc.on("end", () => {
-                    resolve({
-                        type: "pdf",
-                        filename: `${paste.slug}.pdf`,
-                        content: Buffer.concat(chunks),
-                    });
-                });
-                doc.font("Courier").fontSize(12).text(paste.content);
-                doc.end();
-            });
+            const html = `
+        <html>
+            <head>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        padding: 20px;
+                    }
+                    h1, h2, h3, h4 {
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                    }
+                    p {
+                        margin-bottom: 8px;
+                    }
+                    pre, code {
+                        background: #f4f4f4;
+                        padding: 10px;
+                        border-radius: 5px;
+                        display: block;
+                        white-space: pre-wrap;
+                        font-family: monospace;
+                    }
+                </style>
+            </head>
+            <body>${render}</body>
+        </html>
+    `;
+
+            await page.setContent(html, { waitUntil: "networkidle0" });
+
+            const pdf = await page.pdf({ format: "A4" });
+
+            await browser.close();
+
+            return {
+                type: "pdf",
+                filename: `${paste.slug}.pdf`,
+                content: pdf
+            };
         }
 
         throw new Error("InvalidFormat");
