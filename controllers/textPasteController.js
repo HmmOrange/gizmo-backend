@@ -13,9 +13,9 @@ export const createPaste = async (req, res) => {
 
 export const getPublicPastes = async (req, res) => {
     try {
+        const sortBy = req.query.sort || "newest";
         console.log("Fetching public pastes");
-        const pastes = await pasteService.getPublicPastes();
-        console.log(pastes);
+        const pastes = await pasteService.getPublicPastes(sortBy);
         res.json(pastes);
     } catch (err) {
         res.status(500).json({ error: err.message });
