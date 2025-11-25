@@ -47,7 +47,7 @@ export class UserService {
   }
 
   async updateProfile(userId, updates) {
-    const allowed = ["username", "password", "avatarUrl"];
+    const allowed = ["username", "password", "avatarUrl", "fullname"];
     const filtered = {};
 
     for (const key of allowed) {

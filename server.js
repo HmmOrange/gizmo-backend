@@ -15,6 +15,7 @@ import Paste from "./models/TextPaste.js";
 import bookmarkRoutes from "./routes/bookmarkRoutes.js";
 import ocrRoutes from "./routes/ocr.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 const app = express();
 
@@ -56,6 +57,7 @@ app.use("/share", shareRoutes);
 app.use("/api/bookmarks", bookmarkRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api", ocrRoutes);
+app.use("/api/user", userRoutes);
 
 
 // ⬇ Debug route added here
