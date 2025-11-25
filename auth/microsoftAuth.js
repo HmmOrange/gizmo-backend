@@ -121,7 +121,10 @@ export async function handleMicrosoftCallback(req, res) {
       user = existingUser;
     } else {
       console.log("✔ Provider exists; retrieving user...");
-      user = await User.get(provider.userId);
+
+      let result = await User.scan("userId").eq(provider.userId).limit(1).exec();
+      user = result[0];
+
       console.log("✔ User found:", user);
     }
 
@@ -137,7 +140,15 @@ export async function handleMicrosoftCallback(req, res) {
 
     res.redirect(`${FRONTEND_URL}/auth/success?token=${encodeURIComponent(jwtToken)}`);
   } catch (error) {
-    console.error("\n❌ FATAL OAUTH ERROR:", error);
+    console.log("\n------------------------------------------");
+    console.log("❌ MICROSOFT TOKEN EXCHANGE FAILED");
+    console.log("------------------------------------------");
+    console.log("Message:", error.message);
+    console.log("Code:", error.errorCode || "none");
+    console.log("Response:", error.response?.body || "no response body");
+    console.log("Stack:", error.stack);
+    console.log("------------------------------------------\n");
+
     return res.redirect(`${FRONTEND_URL}/login?error=oauth_failed`);
   }
 }
