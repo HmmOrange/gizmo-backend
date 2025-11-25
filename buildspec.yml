@@ -4,18 +4,23 @@ phases:
   install:
     runtime-versions:
       nodejs: 22
-  pre_build:
     commands:
-      - echo "Installing dependencies..."
-      - npm ci --only=production 
+      - echo "Installing production dependencies..."
+      - npm ci --only=production
+
   build:
     commands:
-      - echo "Build completed - preparing deployment package..."
+      - echo "No build step needed for pure Node.js."
+
   post_build:
     commands:
+      - echo "Preparing deployment package..."
+      - mkdir deploy
+      - cp -r * deploy/
+      - cp -r node_modules deploy/
       - echo "Deployment package ready!"
 
 artifacts:
+  base-directory: deploy
   files:
-    - '**/*'                        
-  discard-paths: yes
+    - '**/*'
