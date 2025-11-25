@@ -122,6 +122,22 @@ export const getUserBookmarks = async (req, res) => {
       }
     }
 
+    // Attach accurate bookmark counts for returned pastes
+    const pasteSlugs = pastes.map(p => p.slug).filter(Boolean);
+    if (pasteSlugs.length > 0) {
+      try {
+        const pasteAgg = await Bookmark.aggregate([
+          { $match: { targetType: 'paste', targetId: { $in: pasteSlugs } } },
+          { $group: { _id: '$targetId', count: { $sum: 1 } } }
+        ]).exec();
+        const countsMap = {};
+        for (const r of pasteAgg) countsMap[r._id] = r.count;
+        for (const p of pastes) p.bookmarks = countsMap[p.slug] || (p.bookmarks || 0);
+      } catch (e) {
+        // ignore aggregation failures
+      }
+    }
+
     res.json({
       images,
       albums,

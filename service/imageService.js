@@ -296,16 +296,22 @@ export class ImageService {
         };
     }
 
-    async listPublicImages(limit = 50, skip = 0) {
+    async listPublicImages({ limit = 50, skip = 0, sort = "newest" }) {
+        let sortOption = { createdAt: -1 };
+
+        if (sort === "views") sortOption = { views: -1 };
+        if (sort === "bookmark") sortOption = { bookmarks: -1 };
+
         const images = await Image.find({
             exposure: { $in: ["public", "unlisted"] }
         })
-            .sort({ createdAt: -1 })
+            .sort(sortOption)
             .skip(skip)
             .limit(limit)
             .lean();
 
         return images.map(img => this._sanitize(img));
     }
+
 
 }

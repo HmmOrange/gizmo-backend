@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import puppeteer from "puppeteer";
 import PDFDocument from "pdfkit";
 import { summarizeText } from "../utils/azureSummary.js";
+import { marked } from "marked";
 export class PasteService {
     generateId(length = 6) {
         const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -51,15 +52,29 @@ export class PasteService {
         return await Paste.create(item);
     }
 
-    async getPublicPastes() {
-        const now = Math.floor(Date.now() / 1000);
-
-        return await Paste.scan("exposure")
+    async getPublicPastes(sortBy = "newest") {
+        let pastes = await Paste.scan("exposure")
             .eq("public")
-            // .filter("expiredAt")
-            // .ge(now)
-            // .sort("descending")
             .exec();
+        // pastes = pastes.filter(p => !p.expiredAt || p.expiredAt > now);
+        // console.log("Public pastes fetched:", pastes.length,);
+        // SORT
+        if (sortBy === "views") {
+            pastes.sort((a, b) => (b.views || 0) - (a.views || 0));
+        }
+        else if (sortBy === "bookmark") {
+            pastes.sort((a, b) => (b.bookmarks || 0) - (a.bookmarks || 0));
+        }
+        else { // newest (default)
+            pastes.sort((a, b) => {
+                const ad = new Date(a.createdAt || 0).getTime();
+                const bd = new Date(b.createdAt || 0).getTime();
+                return bd - ad;
+            });
+        }
+        console.log("Public pastes sorted.");
+
+        return pastes;
     }
 
     checkAccess(paste, user, password) {
@@ -124,37 +139,98 @@ export class PasteService {
                 content: paste.content,
             };
         }
-
+        console.log("Exporting paste:", paste.content);
+        const render = marked.parse(paste.content || "");
+        console.log("Rendered content for export.", render);
         if (format === "png") {
-            const browser = await puppeteer.launch();
+            const browser = await puppeteer.launch({ headless: "new" });
             const page = await browser.newPage();
-            await page.setContent(
-                `<pre style='font-family: monospace; font-size: 16px;'>${paste.content
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")}</pre>`
-            );
+
+            const html = `
+        <html>
+            <head>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        padding: 20px;
+                    }
+                    h1, h2, h3, h4 {
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                    }
+                    p {
+                        margin-bottom: 8px;
+                    }
+                    pre, code {
+                        background: #f4f4f4;
+                        padding: 10px;
+                        border-radius: 5px;
+                        display: block;
+                        white-space: pre-wrap;
+                        font-family: monospace;
+                    }
+                    strong { font-weight: bold; }
+                    em { font-style: italic; }
+                    li { margin-bottom: 4px; }
+                </style>
+            </head>
+            <body>${render}</body>
+        </html>
+    `;
+
+            await page.setContent(html, { waitUntil: "networkidle0" });
+
             const buffer = await page.screenshot({ fullPage: true });
+
             await browser.close();
 
             return { type: "png", filename: `${paste.slug}.png`, content: buffer };
         }
 
         if (format === "pdf") {
-            const doc = new PDFDocument();
-            let chunks = [];
+            const browser = await puppeteer.launch({ headless: "new" });
+            const page = await browser.newPage();
 
-            doc.on("data", (chunk) => chunks.push(chunk));
-            return new Promise((resolve) => {
-                doc.on("end", () => {
-                    resolve({
-                        type: "pdf",
-                        filename: `${paste.slug}.pdf`,
-                        content: Buffer.concat(chunks),
-                    });
-                });
-                doc.font("Courier").fontSize(12).text(paste.content);
-                doc.end();
-            });
+            const html = `
+        <html>
+            <head>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        padding: 20px;
+                    }
+                    h1, h2, h3, h4 {
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                    }
+                    p {
+                        margin-bottom: 8px;
+                    }
+                    pre, code {
+                        background: #f4f4f4;
+                        padding: 10px;
+                        border-radius: 5px;
+                        display: block;
+                        white-space: pre-wrap;
+                        font-family: monospace;
+                    }
+                </style>
+            </head>
+            <body>${render}</body>
+        </html>
+    `;
+
+            await page.setContent(html, { waitUntil: "networkidle0" });
+
+            const pdf = await page.pdf({ format: "A4" });
+
+            await browser.close();
+
+            return {
+                type: "pdf",
+                filename: `${paste.slug}.pdf`,
+                content: pdf
+            };
         }
 
         throw new Error("InvalidFormat");
@@ -188,6 +264,35 @@ export class PasteService {
             authorId: p.authorId,
             exposure: p.exposure
         }));
+    }
+
+    async getPastesByUser(userId) {
+        if (!userId) return [];
+        try {
+            console.log('getPastesByUser querying for userId:', userId);
+            // Use scan as fallback since query on GSI might not work reliably
+            let pastes = await Paste.scan('authorId').eq(userId).exec();
+            console.log('Scan result:', pastes ? pastes.length : 0, 'pastes');
+            if (!pastes || pastes.length === 0) {
+                console.log('No pastes found, trying query method');
+                pastes = await Paste.query('authorId').eq(userId).exec();
+                console.log('Query result:', pastes ? pastes.length : 0, 'pastes');
+            }
+            return (pastes || []).map(p => ({
+                slug: p.slug,
+                title: p.title,
+                snippet: (p.content || '').substring(0, 150) + (p.content && p.content.length > 150 ? '...' : ''),
+                views: p.views || 0,
+                bookmarks: p.bookmarks || 0,
+                authorId: p.authorId,
+                exposure: p.exposure,
+                createdAt: p.createdAt,
+                updatedAt: p.updatedAt
+            }));
+        } catch (err) {
+            console.error('getPastesByUser error:', err.message, err);
+            return [];
+        }
     }
 
 }

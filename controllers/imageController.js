@@ -186,10 +186,10 @@ export const getPublicImages = async (req, res) => {
     try {
         const limit = Number(req.query.limit) || 50;
         const skip = Number(req.query.skip) || 0;
+        const sort = req.query.sort || "newest";
 
         const imageService = new ImageService();
-        // console.log("Fetching public images with limit=", limit, "skip=", skip);
-        const images = await imageService.listPublicImages(limit, skip);
+        const images = await imageService.listPublicImages({ limit, skip, sort });
 
         res.json({
             success: true,
@@ -202,3 +202,4 @@ export const getPublicImages = async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 };
+
