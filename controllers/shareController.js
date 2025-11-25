@@ -55,6 +55,7 @@ export const shareAlbum = async (req, res) => {
                 exposure: img.exposure,
                 createdAt: img.createdAt,
                 bookmarkCount: count,
+                view: img.views || 0,
             });
         }
 
