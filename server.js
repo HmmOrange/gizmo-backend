@@ -14,6 +14,7 @@ import shareRoutes from "./routes/shareRoutes.js";
 import Paste from "./models/TextPaste.js";
 import bookmarkRoutes from "./routes/bookmarkRoutes.js";
 import ocrRoutes from "./routes/ocr.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
 
 const app = express();
 
@@ -53,6 +54,7 @@ app.use("/api/images", imageRoutes);
 app.use("/api/albums", albumRoutes);
 app.use("/share", shareRoutes);
 app.use("/api/bookmarks", bookmarkRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 app.use("/api", ocrRoutes);
 
 

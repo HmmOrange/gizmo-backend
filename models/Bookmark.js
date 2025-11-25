@@ -2,8 +2,8 @@ import mongoose, { Schema } from 'mongoose';
 
 const BookmarkSchema = new Schema({
   userId: { type: String, required: true, index: true },
-  targetType: { type: String, enum: ['image', 'album'], required: true, index: true },
-  targetId: { type: Schema.Types.ObjectId, required: true, index: true },
+  targetType: { type: String, enum: ['image', 'album', 'paste'], required: true, index: true },
+  targetId: { type: Schema.Types.Mixed, required: true, index: true },
 }, { timestamps: true });
 
 // ensure a user can only bookmark a target once
