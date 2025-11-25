@@ -5,6 +5,14 @@ import puppeteer from "puppeteer";
 import PDFDocument from "pdfkit";
 import { summarizeText } from "../utils/azureSummary.js";
 export class PasteService {
+    generateId(length = 6) {
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        let result = "";
+        for (let i = 0; i < length; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
     async createPaste(data, user) {
         const { title, content, password, expiredAt, slug, exposure } = data;
 
@@ -14,7 +22,11 @@ export class PasteService {
         }
 
         const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
-        const id = uuidv4();
+        let id = this.generateId(6);
+        while (await Paste.get(id)) {
+            id = this.generateId(6);
+        }
+
         let expiresUnix;
 
         if (expiredAt) {
