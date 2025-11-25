@@ -19,6 +19,31 @@ export const listAlbums = async (req, res) => {
   }
 };
 
+export const getUserAlbums = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Authentication required' });
+
+    const albums = await Album.find({ authorId: userId }).sort({ createdAt: -1 }).lean();
+    const sanitized = albums.map(a => ({
+      _id: a._id,
+      name: a.name,
+      slug: a.slug,
+      description: a.description,
+      exposure: a.exposure,
+      authorId: a.authorId,
+      images: a.images || [],
+      bookmarks: a.bookmarks || 0,
+      createdAt: a.createdAt
+    }));
+
+    res.json({ albums: sanitized });
+  } catch (err) {
+    console.error('getUserAlbums error:', err);
+    res.status(500).json({ message: 'Could not fetch user albums' });
+  }
+};
+
 export const checkAlbumSlug = async (req, res) => {
   try {
     const slug = (req.query.slug || "").trim();

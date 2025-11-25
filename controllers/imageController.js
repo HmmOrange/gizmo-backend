@@ -203,3 +203,24 @@ export const getPublicImages = async (req, res) => {
     }
 };
 
+export const getUserImages = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ message: 'Authentication required' });
+
+        const limit = Number(req.query.limit) || 50;
+        const skip = Number(req.query.skip) || 0;
+        const sortParam = req.query.sort || 'newest';
+        let sort = { createdAt: -1 };
+        if (sortParam === 'views') sort = { views: -1 };
+        if (sortParam === 'bookmarks') sort = { bookmarks: -1 };
+
+        const imageService = new ImageService();
+        const images = await imageService.listUserImages(userId, { limit, skip, sort });
+        return res.json({ images });
+    } catch (err) {
+        console.error('getUserImages error:', err);
+        res.status(500).json({ message: 'Server error', error: err.message });
+    }
+};
+
