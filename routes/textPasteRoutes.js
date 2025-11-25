@@ -1,20 +1,19 @@
 import express from "express";
-import { createPaste, getPublicPastes, getPasteById, exportPaste, summarizePaste, updatePaste, favouritePaste, unfavouritePaste, getFavouritePaste } from "../controllers/textPasteController.js";
+import { createPaste, getPublicPastes, getPasteById, exportPaste, summarizePaste, updatePaste, searchPastes } from "../controllers/textPasteController.js";
 import { authUser, optionalAuth } from "../middleware/authUser.js";
 
-const app = express.Router();
+const router = express.Router();
 
-app.use(express.json());
+router.use(express.json());
 
-app.post('/', optionalAuth, createPaste);
-app.get('/', getPublicPastes);
-app.get('/:id', optionalAuth, getPasteById);
-app.patch('/:id', authUser, updatePaste);
-app.get('/:id/export', optionalAuth, exportPaste);
-app.get("/:id/summary", optionalAuth, summarizePaste);
-app.post("/:id/favourite", authUser, favouritePaste);
-app.post("/:id/unfavourite", authUser, unfavouritePaste);
-app.get("/:id/favourite-status", optionalAuth, getFavouritePaste);
+router.get("/search", searchPastes);
+router.post('/', optionalAuth, createPaste);
+router.get('/', getPublicPastes);
+router.get('/:id', optionalAuth, getPasteById);
+router.patch('/:id', authUser, updatePaste);
+router.get('/:id/export', optionalAuth, exportPaste);
+router.get("/:id/summary", optionalAuth, summarizePaste);
 
 
-export default app;
+
+export default router;

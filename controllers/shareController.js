@@ -2,6 +2,7 @@ import Album from "../models/Album.js";
 import Image from "../models/Image.js";
 import { ImageService } from "../service/imageService.js";
 import { optionalAuth } from "../middleware/authUser.js";
+import Bookmark from "../models/Bookmark.js";
 
 const imageService = new ImageService();
 
@@ -42,16 +43,25 @@ export const shareAlbum = async (req, res) => {
     }
 
     // For unlisted/public, just return album with sanitized images
-    const images = (album.images || []).map((img) => ({
-      _id: img._id,
-      caption: img.caption,
-      slug: img.slug,
-      imageUrl: img.imageUrl,
-      exposure: img.exposure,
-      createdAt: img.createdAt,
-    }));
+    // For each image compute bookmark count
+    const images = [];
+    for (const img of (album.images || [])) {
+      const count = await Bookmark.countDocuments({ targetType: 'image', targetId: img._id });
+      images.push({
+        _id: img._id,
+        caption: img.caption,
+        slug: img.slug,
+        imageUrl: img.imageUrl,
+        exposure: img.exposure,
+        createdAt: img.createdAt,
+        bookmarkCount: count,
+      });
+    }
 
-    return res.json({ album: { _id: album._id, name: album.name, slug: album.slug, description: album.description, exposure: album.exposure, images } });
+    // also provide album-level bookmark count
+    const albumBookmarkCount = await Bookmark.countDocuments({ targetType: 'album', targetId: album._id });
+
+    return res.json({ album: { _id: album._id, name: album.name, slug: album.slug, description: album.description, exposure: album.exposure, images, bookmarkCount: albumBookmarkCount } });
   } catch (err) {
     console.error("shareAlbum error:", err);
     res.status(500).json({ message: "Server error" });
@@ -93,6 +103,11 @@ export const shareImage = async (req, res) => {
     // Increment views and return sanitized
     await imageService.incrementViews(image._id);
     const sanitized = imageService._sanitize(image, userId);
+    // add bookmark info
+    const bookmarkCount = await Bookmark.countDocuments({ targetType: 'image', targetId: image._id });
+    const userBookmarked = userId ? !!(await Bookmark.findOne({ userId, targetType: 'image', targetId: image._id })) : false;
+    sanitized.bookmarkCount = bookmarkCount;
+    sanitized.bookmarked = userBookmarked;
     return res.json({ image: sanitized });
   } catch (err) {
     console.error("shareImage error:", err);

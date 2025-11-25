@@ -1,0 +1,26 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - echo "Installing production dependencies..."
+      - npm ci --only=production
+
+  build:
+    commands:
+      - echo "No build step needed for pure Node.js."
+
+  post_build:
+    commands:
+      - echo "Preparing deployment package..."
+      - mkdir deploy
+      - cp -r * deploy/
+      - cp -r node_modules deploy/
+      - echo "Deployment package ready!"
+
+artifacts:
+  base-directory: deploy
+  files:
+    - '**/*'

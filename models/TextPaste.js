@@ -37,7 +37,7 @@ const PasteSchema = new dynamoose.Schema(
                 type: "global",
             },
         },
-        favouriteCount: {
+        bookmarks: {
             type: Number,
             default: 0,
         },

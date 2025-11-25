@@ -4,8 +4,6 @@ import { v4 as uuidv4 } from "uuid";
 import puppeteer from "puppeteer";
 import PDFDocument from "pdfkit";
 import { summarizeText } from "../utils/azureSummary.js";
-import { marked } from "marked";
-import PasteFavourite from "../models/Favourite.js";
 export class PasteService {
     async createPaste(data, user) {
         const { title, content, password, expiredAt, slug, exposure } = data;
@@ -160,42 +158,24 @@ export class PasteService {
 
         return { title: paste.title, summary };
     }
-    async favouritePaste(slug, userId) {
-        const paste = await Paste.get(slug);
-        if (!paste) throw new Error("Paste not found");
-        console.log("Favouriting paste:", slug, "for user:", userId);
-        const existing = await PasteFavourite.get({ objectId: slug, objectType: "paste", userId });
-        if (existing) return paste;
-        await new PasteFavourite({ objectId: slug, objectType: "paste", userId }).save();
 
-        paste.favouriteCount = (paste.favouriteCount || 0) + 1;
-        await paste.save();
-        return paste;
-    };
-    async unfavouritePaste(slug, userId) {
-        const paste = await Paste.get(slug);
-        if (!paste) throw new Error("Paste not found");
+    async searchPastes(query) {
+        const q = query.toLowerCase();
 
-        const existing = await PasteFavourite.get({ objectId: slug, objectType: "paste", userId });
-        if (!existing) return paste;
+        const pastes = await Paste.scan("exposure").eq("public").exec();
+        const filtered = pastes.filter(p =>
+            p.content?.toLowerCase().includes(q) ||
+            p.title?.toLowerCase().includes(q)
+        );
 
-        await existing.delete();
-
-        paste.favouriteCount = Math.max((paste.favouriteCount || 0) - 1, 0);
-        await paste.save();
-
-        return paste;
-    };
-    async getFavouritePaste(pasteId, userId) {
-        const paste = await Paste.get(pasteId);
-        if (!paste) throw new Error("NotFound");
-        const favouriteCount = paste.favouriteCount || 0;
-        let isFavourite = false;
-        if (userId) {
-            const existing = await PasteFavourite.get({ objectId: pasteId, objectType: "paste", userId });
-            if (existing) isFavourite = true;
-        }
-
-        return { favouriteCount, isFavourite };
+        return filtered.map(p => ({
+            slug: p.slug,
+            title: p.title,
+            snippet: p.content.substring(0, 150) + "...",  // snippet nhỏ
+            views: p.views,
+            authorId: p.authorId,
+            exposure: p.exposure
+        }));
     }
+
 }

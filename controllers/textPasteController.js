@@ -86,38 +86,16 @@ export const summarizePaste = async (req, res) => {
     }
 };
 
-export const favouritePaste = async (req, res) => {
+export const searchPastes = async (req, res) => {
     try {
-        const { id } = req.params;
-        console.log(req.user)
-        console.log("Favouriting paste:", id);
-        const paste = await pasteService.favouritePaste(id, req.user.user_id);
-        console.log(paste.favouriteCount)
-        res.json({ slug: paste.slug, favouriteCount: paste.favouriteCount });
+        const query = req.query.q?.toLowerCase() || "";
+        console.log("Searching pastes for query:", query);
+        if (!query) return res.status(400).json({ error: "Missing search query" });
+        console.log("Searching pastes for query:", query);
+        const results = await pasteService.searchPastes(query);
+        res.json(results);
     } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
-};
-
-export const unfavouritePaste = async (req, res) => {
-    try {
-        const { id } = req.params;
-        console.log(req.user)
-        console.log("UnFavouriting paste:", id);
-        const paste = await pasteService.unfavouritePaste(id, req.user.user_id);
-        res.json({ slug: paste.slug, favouriteCount: paste.favouriteCount });
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
-};
-
-export const getFavouritePaste = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const userId = req.user?.user_id || null;
-        const paste = await pasteService.getFavouritePaste(id, userId);
-        res.json(paste);
-    } catch (err) {
-        res.status(400).json({ error: err.message });
+        console.error("Search error:", err);
+        res.status(500).json({ error: "Search failed" });
     }
 };
