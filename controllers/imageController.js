@@ -188,7 +188,7 @@ export const getPublicImages = async (req, res) => {
         const skip = Number(req.query.skip) || 0;
 
         const imageService = new ImageService();
-        console.log("Fetching public images with limit=", limit, "skip=", skip);
+        // console.log("Fetching public images with limit=", limit, "skip=", skip);
         const images = await imageService.listPublicImages(limit, skip);
 
         res.json({

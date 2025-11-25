@@ -71,7 +71,6 @@ export class PasteService {
         if (paste.expiredAt && paste.expiredAt <= now) throw new Error("NotFound");
 
         this.checkAccess(paste, user, password);
-
         return await Paste.update(
             { slug: id },
             { views: (paste.views || 0) + 1 }
@@ -159,4 +158,24 @@ export class PasteService {
 
         return { title: paste.title, summary };
     }
+
+    async searchPastes(query) {
+        const q = query.toLowerCase();
+
+        const pastes = await Paste.scan("exposure").eq("public").exec();
+        const filtered = pastes.filter(p =>
+            p.content?.toLowerCase().includes(q) ||
+            p.title?.toLowerCase().includes(q)
+        );
+
+        return filtered.map(p => ({
+            slug: p.slug,
+            title: p.title,
+            snippet: p.content.substring(0, 150) + "...",  // snippet nhỏ
+            views: p.views,
+            authorId: p.authorId,
+            exposure: p.exposure
+        }));
+    }
+
 }

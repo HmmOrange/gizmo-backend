@@ -27,6 +27,7 @@
     "dynamoose": "^4.0.4",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "marked": "^17.0.1",
     "mongoose": "^8.19.2",
     "multer": "^2.0.2",
     "nanoid": "^5.1.6",

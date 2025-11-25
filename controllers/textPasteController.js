@@ -85,3 +85,17 @@ export const summarizePaste = async (req, res) => {
         res.status(500).json({ error: "Failed summarizing" });
     }
 };
+
+export const searchPastes = async (req, res) => {
+    try {
+        const query = req.query.q?.toLowerCase() || "";
+        console.log("Searching pastes for query:", query);
+        if (!query) return res.status(400).json({ error: "Missing search query" });
+        console.log("Searching pastes for query:", query);
+        const results = await pasteService.searchPastes(query);
+        res.json(results);
+    } catch (err) {
+        console.error("Search error:", err);
+        res.status(500).json({ error: "Search failed" });
+    }
+};
