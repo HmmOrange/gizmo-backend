@@ -190,4 +190,33 @@ export class PasteService {
         }));
     }
 
+    async getPastesByUser(userId) {
+        if (!userId) return [];
+        try {
+            console.log('getPastesByUser querying for userId:', userId);
+            // Use scan as fallback since query on GSI might not work reliably
+            let pastes = await Paste.scan('authorId').eq(userId).exec();
+            console.log('Scan result:', pastes ? pastes.length : 0, 'pastes');
+            if (!pastes || pastes.length === 0) {
+                console.log('No pastes found, trying query method');
+                pastes = await Paste.query('authorId').eq(userId).exec();
+                console.log('Query result:', pastes ? pastes.length : 0, 'pastes');
+            }
+            return (pastes || []).map(p => ({
+                slug: p.slug,
+                title: p.title,
+                snippet: (p.content || '').substring(0, 150) + (p.content && p.content.length > 150 ? '...' : ''),
+                views: p.views || 0,
+                bookmarks: p.bookmarks || 0,
+                authorId: p.authorId,
+                exposure: p.exposure,
+                createdAt: p.createdAt,
+                updatedAt: p.updatedAt
+            }));
+        } catch (err) {
+            console.error('getPastesByUser error:', err.message, err);
+            return [];
+        }
+    }
+
 }

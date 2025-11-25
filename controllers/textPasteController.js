@@ -1,4 +1,5 @@
 import { PasteService } from "../service/pasteService.js";
+import Bookmark from '../models/Bookmark.js';
 const pasteService = new PasteService();
 export const createPaste = async (req, res) => {
     try {
@@ -97,5 +98,36 @@ export const searchPastes = async (req, res) => {
     } catch (err) {
         console.error("Search error:", err);
         res.status(500).json({ error: "Search failed" });
+    }
+};
+
+export const getUserPastes = async (req, res) => {
+    try {
+        const userId = req.user?.user_id;
+        console.log('getUserPastes called, userId:', userId, 'req.user:', req.user);
+        const pastes = await pasteService.getPastesByUser(userId);
+        console.log('getPastesByUser returned:', pastes.length, 'pastes');
+        // Ensure each paste has an accurate bookmark count by aggregating Bookmark docs
+        const slugs = pastes.map(p => p.slug).filter(Boolean);
+        if (slugs.length > 0) {
+            try {
+                const agg = await Bookmark.aggregate([
+                    { $match: { targetType: 'paste', targetId: { $in: slugs } } },
+                    { $group: { _id: '$targetId', count: { $sum: 1 } } }
+                ]).exec();
+                const counts = {};
+                for (const row of agg) counts[row._id] = row.count;
+                for (const p of pastes) {
+                    p.bookmarks = counts[p.slug] || (p.bookmarks || 0);
+                }
+            } catch (e) {
+                // fallback to existing p.bookmarks if aggregation fails
+            }
+        }
+
+        res.json(pastes);
+    } catch (err) {
+        console.error('getUserPastes error:', err);
+        res.status(500).json({ error: err.message });
     }
 };
